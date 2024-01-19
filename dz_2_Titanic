@@ -1,47 +1,108 @@
-import numpy as np
-import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
 
-# Load the datasets
-data = pd.read_csv("/kaggle/input/titanic/train.csv")
-test = pd.read_csv("/kaggle/input/titanic/test.csv")
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 
-# Feature extraction
-data = data.drop(columns=["Name", "Ticket", "PassengerId", "Fare"])
-test = test.drop(columns=["Name", "Ticket", "PassengerId", "Fare"])
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
 
-# Combine SibSp and Parch into FamCnt
-data["FamCnt"] = data["SibSp"] + data["Parch"]
-data = data.drop(columns=["SibSp", "Parch", "Cabin"])
-test["FamCnt"] = test["SibSp"] + test["Parch"]
-test = test.drop(columns=["SibSp", "Parch", "Cabin"])
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
 
-# Label encoding and One-Hot encoding
-from sklearn.preprocessing import LabelEncoder
+# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
 
-le = LabelEncoder()
-data["Sex"] = le.fit_transform(data["Sex"])
-data = pd.get_dummies(data, columns=["Embarked", "Pclass"], dtype=int)
+train_data = pd.read_csv("/kaggle/input/www-kaggle-comdatasetsnatalimazurtitanic/train.csv")
 
-test["Sex"] = le.fit_transform(test["Sex"])
-test = pd.get_dummies(test, columns=["Embarked", "Pclass"], dtype=int)
+map = {'C':1, 'Q':2, 'S':3}
 
-# Handling missing values
-data = data.fillna(data.mean())
-data["Age"] = data["Age"].astype(int)
+train_data["Embarked"] = train_data["Embarked"].apply(lambda item: map.get(item))
+train_data["Embarked"] = train_data["Embarked"].fillna(0)
+train_data.head()
 
-test = test.fillna(test.mean())
-test["Age"] = test["Age"].astype(int)
+train_data.describe()
 
-# Training the model
-y_train, X_train = data["Survived"], data.drop(columns=["Survived"])
-model = DecisionTreeClassifier()
-model = model.fit(X_train, y_train)
+test_data = pd.read_csv("/kaggle/input/www-kaggle-comdatasetsnatalimazurtitanic/test.csv")
+map = {'C':1, 'Q':2, 'S':3}
 
-# Making predictions
-predictions = model.predict(test)
+test_data["Embarked"] = test_data["Embarked"].apply(lambda item: map.get(item))
+test_data["Embarked"] = test_data["Embarked"].fillna(0)
+test_data.head()
 
-# Creating submission file
-ori_data = pd.read_csv("/kaggle/input/titanic/test.csv")
-submission = pd.DataFrame({'PassengerId': ori_data['PassengerId'], 'Survived': predictions})
-submission.to_csv("/kaggle/working/submission.csv", header=True, index=False)
+test_data.describe()
+
+women = train_data.loc[train_data.Sex == 'female']["Survived"]
+print("% of women who survived:", sum(women)/len(women))
+men = train_data.loc[train_data.Sex == 'male']["Survived"]
+print("% of men who survived:", sum(men)/len(men))
+
+import matplotlib.pyplot as plt
+value_count = train_data.loc[train_data.Survived == 1]["Pclass"].value_counts()
+x = np.array(value_count.index.tolist())
+y = np.array(value_count.tolist())
+b1 = (np.mean(x * y) - np.mean(x) * np.mean(y)) / (np.mean(x ** 2) - np.mean(x) ** 2)
+b0 = np.mean(y) - b1 * np.mean(x)
+plt.figure(figsize=(16, 4))
+plt.subplot(1, 4, 1)
+plt.scatter(x, y)
+plt.plot(x, b0 + b1 * x)
+plt.title(f"Pclass r={np.corrcoef(x, y)[1][0]:.2f}")
+plt.xlabel('values')
+plt.ylabel('counts')
+
+value_count = train_data.loc[train_data.Survived == 1]["SibSp"].value_counts()
+x = np.array(value_count.index.tolist())
+y = np.array(value_count.tolist())
+b1 = (np.mean(x * y) - np.mean(x) * np.mean(y)) / (np.mean(x ** 2) - np.mean(x) ** 2)
+b0 = np.mean(y) - b1 * np.mean(x)
+plt.subplot(1, 4, 2)
+plt.scatter(x, y)
+plt.plot(x, b0 + b1 * x)
+plt.title(f"SibSp r={np.corrcoef(x, y)[1][0]:.2f}")
+plt.xlabel('values')
+plt.ylabel('counts')
+
+value_count = train_data.loc[train_data.Survived == 1]["Parch"].value_counts()
+x = np.array(value_count.index.tolist())
+y = np.array(value_count.tolist())
+b1 = (np.mean(x * y) - np.mean(x) * np.mean(y)) / (np.mean(x ** 2) - np.mean(x) ** 2)
+b0 = np.mean(y) - b1 * np.mean(x)
+plt.subplot(1, 4, 3)
+plt.scatter(x, y)
+plt.plot(x, b0 + b1 * x)
+plt.title(f"Parch r={np.corrcoef(x, y)[1][0]:.2f}")
+plt.xlabel('values')
+plt.ylabel('counts')
+
+value_count = train_data.loc[train_data.Survived == 1]["Embarked"].value_counts()
+x = np.array(value_count.index.tolist())
+y = np.array(value_count.tolist())
+b1 = (np.mean(x * y) - np.mean(x) * np.mean(y)) / (np.mean(x ** 2) - np.mean(x) ** 2)
+b0 = np.mean(y) - b1 * np.mean(x)
+plt.subplot(1, 4, 4)
+plt.scatter(x, y)
+plt.plot(x, b0 + b1 * x)
+plt.title(f"Embarked r={np.corrcoef(x, y)[1][0]:.2f}")
+plt.xlabel('values')
+plt.ylabel('counts')
+
+plt.show()
+
+from sklearn.ensemble import RandomForestClassifier
+
+y = train_data["Survived"]
+
+features = ["Pclass", "Sex", "SibSp", "Parch", "Embarked"]
+X = pd.get_dummies(train_data[features])
+X_test = pd.get_dummies(test_data[features])
+model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=1)
+model.fit(X, y)
+predictions = model.predict(X_test)
+output = pd.DataFrame({'PassengerId': test_data.PassengerId, 'Survived': predictions})
+output.to_csv('submission.csv', index=False)
+print("Your submission was successfully saved!")
+
