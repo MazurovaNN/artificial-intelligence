@@ -1,0 +1,47 @@
+import numpy as np
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+
+# Load the datasets
+data = pd.read_csv("/kaggle/input/titanic/train.csv")
+test = pd.read_csv("/kaggle/input/titanic/test.csv")
+
+# Feature extraction
+data = data.drop(columns=["Name", "Ticket", "PassengerId", "Fare"])
+test = test.drop(columns=["Name", "Ticket", "PassengerId", "Fare"])
+
+# Combine SibSp and Parch into FamCnt
+data["FamCnt"] = data["SibSp"] + data["Parch"]
+data = data.drop(columns=["SibSp", "Parch", "Cabin"])
+test["FamCnt"] = test["SibSp"] + test["Parch"]
+test = test.drop(columns=["SibSp", "Parch", "Cabin"])
+
+# Label encoding and One-Hot encoding
+from sklearn.preprocessing import LabelEncoder
+
+le = LabelEncoder()
+data["Sex"] = le.fit_transform(data["Sex"])
+data = pd.get_dummies(data, columns=["Embarked", "Pclass"], dtype=int)
+
+test["Sex"] = le.fit_transform(test["Sex"])
+test = pd.get_dummies(test, columns=["Embarked", "Pclass"], dtype=int)
+
+# Handling missing values
+data = data.fillna(data.mean())
+data["Age"] = data["Age"].astype(int)
+
+test = test.fillna(test.mean())
+test["Age"] = test["Age"].astype(int)
+
+# Training the model
+y_train, X_train = data["Survived"], data.drop(columns=["Survived"])
+model = DecisionTreeClassifier()
+model = model.fit(X_train, y_train)
+
+# Making predictions
+predictions = model.predict(test)
+
+# Creating submission file
+ori_data = pd.read_csv("/kaggle/input/titanic/test.csv")
+submission = pd.DataFrame({'PassengerId': ori_data['PassengerId'], 'Survived': predictions})
+submission.to_csv("/kaggle/working/submission.csv", header=True, index=False)
